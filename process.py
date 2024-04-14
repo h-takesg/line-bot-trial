@@ -1,5 +1,6 @@
 from linebot.v3.messaging import (
-    TextMessage, QuickReply, QuickReplyItem, PostbackAction
+    TextMessage, QuickReply, QuickReplyItem, PostbackAction,
+    FlexMessage, FlexBubble, FlexBox, FlexText, FlexSeparator, FlexSpan
 )
 import json
 import random
@@ -33,7 +34,6 @@ def generate_reply(data: dict):
         quick_reply = generate_quick_replys(history, picked_question_id, picked_question)
         ret.append(TextMessage(text=picked_question["word"], quickReply=quick_reply))
     else:
-        ret.append(TextMessage(text="おわりやで"))
         ret.append(generate_result(questions, history))
     return ret
 
@@ -83,4 +83,38 @@ def generate_result(questions:dict, history: dict):
         question = questions[history["q" + str(i + 1) + "id"]]
         if question["correct"] == question["options"][int(history["q" + str(i + 1) + "answer"])]:
             correct_ids.append(history["q" + str(i + 1) + "id"])
-    return TextMessage(text=f"{QUESTION_LIMIT}問中、{len(correct_ids)}問正解や！")
+
+    header_text = FlexText(text="結果発表～～", size="lg", weight="bold")
+    header_box = FlexBox(layout="horizontal", paddingBottom="0px", contents=[header_text])
+    result_count_box = FlexBox(layout="horizontal", height="100px", contents=[FlexText(align="center", contents=[FlexSpan(text=str(len(correct_ids)) + "/", size="5xl"), FlexSpan(text=f"{QUESTION_LIMIT}", size="3xl")])])
+    detail_results = []
+    for i in range(QUESTION_LIMIT):
+        detail_results.append(generate_detail_result(i + 1, questions[history["q" + str(i + 1) + "id"]], history["q" + str(i + 1) + "answer"]))
+    body_box = FlexBox(layout="vertical", paddingTop="0px", contents=[
+        FlexText(text="正解数は..."),
+        result_count_box,
+        FlexSeparator(),
+        FlexText(text="正しい読み方はこうやで"),
+        *detail_results
+    ])
+    flex_bubble = FlexBubble(header=header_box, body=body_box)
+    flex_message = FlexMessage(altText="flex", contents=flex_bubble)
+    return flex_message
+
+def generate_detail_result(question_number: int, question: dict, answer: str):
+    iscorrect = question["options"][int(answer)] == question["correct"]
+    if iscorrect:
+        result_icon = "O"
+        result_icon_color = "#009900"
+    else:
+        result_icon = "X"
+        result_icon_color = "#DD0000"
+    
+    return FlexBox(layout="vertical",contents=[
+        FlexText(text=f"Q.{question_number}", size="lg"),
+        FlexBox(layout="horizontal", contents=[
+            FlexText(text=result_icon, color=result_icon_color, weight="bold", flex=0),
+            FlexText(text=question["word"]),
+            FlexText(text=question["correct"])
+        ])
+    ])
