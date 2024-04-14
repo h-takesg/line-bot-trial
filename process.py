@@ -20,32 +20,29 @@ def generate_reply(data: dict):
     if action == "start":
         ## 問いかけ
         ret.append(TextMessage(text="大阪地名クイズを始めるで"))
-        ## 問題選択
-        (picked_question_id, picked_question) = pick_question(questions)
-        ## クイックリプライ生成
-        quick_reply = generate_quick_replys(history, picked_question_id, picked_question)
-        ## メッセージ生成
-        ret.append(TextMessage(text=picked_question["word"], quickReply=quick_reply))
+        ret.append(generate_question_message(questions, history))
     elif action == "answer":
         ret.append(TextMessage(text="次やで"))
         ## 使用済みの問題を外す
         questions = get_unused_questions(questions, history)
-        (picked_question_id, picked_question) = pick_question(questions)
-        quick_reply = generate_quick_replys(history, picked_question_id, picked_question)
-        ret.append(TextMessage(text=picked_question["word"], quickReply=quick_reply))
+        ret.append(generate_question_message(questions, history))
     else:
         ret.append(generate_result(questions, history))
     return ret
 
+## 以下プライベート
+## ファイルから問題を読み込む
 def load_questions():
     with open("questions.json") as f:
         questions = json.load(f)
     return questions
 
+## ランダムに1問選ぶ
 def pick_question(questions: dict):
     question_id = random.choice(list(questions.keys()))
     return (question_id, questions[question_id])
 
+## 選択肢のクイックリプライを生成する
 def generate_quick_replys(history: dict, question_id: str, question: dict):
     question_number = count_answered(history) + 1
     isfinal = question_number == QUESTION_LIMIT
@@ -54,6 +51,7 @@ def generate_quick_replys(history: dict, question_id: str, question: dict):
         items.append(generate_quick_reply_item(history, question_number, question_id, i, question["options"][i], isfinal))
     return QuickReply(items=items)
 
+## 選択肢のクイックリプライ一つを生成する
 def generate_quick_reply_item(history: dict, question_number: int, question_id: str, option_number, option: str, isfinal):
     data = {**history}
     if isfinal:
@@ -65,10 +63,12 @@ def generate_quick_reply_item(history: dict, question_number: int, question_id: 
     action = PostbackAction(label=option, data=datastr, displayText=option)
     return QuickReplyItem(action=action)
 
+## これまでの解答回数を数える
 def count_answered(history: dict):
     count = len(list(filter(lambda x: "id" in x, list(history.keys()))))
     return count
 
+## 未出題の問題のみ返す
 def get_unused_questions(questions, history):
     answered_id_keys = list(filter(lambda x: "id" in x, list(history.keys())))
     used_ids = [history[x] for x in answered_id_keys]
@@ -77,6 +77,13 @@ def get_unused_questions(questions, history):
         del ret[used_id]
     return ret
 
+## 出題メッセージとクイックリプライを生成する
+def generate_question_message(questions, history):
+    (picked_question_id, picked_question) = pick_question(questions)
+    quick_reply = generate_quick_replys(history, picked_question_id, picked_question)
+    return TextMessage(text=picked_question["word"], quickReply=quick_reply)
+
+## 結果発表メッセージを生成する
 def generate_result(questions:dict, history: dict):
     correct_ids = []
     for i in range(QUESTION_LIMIT):
@@ -101,6 +108,7 @@ def generate_result(questions:dict, history: dict):
     flex_message = FlexMessage(altText="flex", contents=flex_bubble)
     return flex_message
 
+## 問題ごとの結果を生成する
 def generate_detail_result(question_number: int, question: dict, answer: str):
     iscorrect = question["options"][int(answer)] == question["correct"]
     if iscorrect:

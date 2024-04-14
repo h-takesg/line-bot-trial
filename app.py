@@ -3,8 +3,7 @@ from linebot.v3 import WebhookHandler
 from linebot.v3.exceptions import InvalidSignatureError
 from linebot.v3.messaging import (
 	ApiClient, Configuration, MessagingApi,
-	ReplyMessageRequest, PushMessageRequest,
-	TextMessage, PostbackAction
+	ReplyMessageRequest, TextMessage
 )
 from linebot.v3.webhooks import (
 	FollowEvent, MessageEvent, PostbackEvent, TextMessageContent
@@ -92,8 +91,10 @@ def handle_postback(event: PostbackEvent):
 	## 辞書型で取得する(e.g. data = {'action': 'buy', 'itemid': '123'})
 	data = dict(urllib.parse.parse_qsl(event.postback.data))
 	
+	## 応答を生成
 	messages = process.generate_reply(data)
 
+	## 応答
 	line_bot_api.reply_message(ReplyMessageRequest(
 		replyToken=event.reply_token,
 		messages=messages

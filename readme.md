@@ -32,7 +32,7 @@ curl -v -X POST https://api.line.me/v2/bot/richmenu \
         },
         "action": {
           "type": "postback",
-          "data": "action=buy&itemid=123"
+          "data": "action=buy&item=123"
         }
       }
    ]
