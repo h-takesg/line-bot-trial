@@ -10,6 +10,8 @@ from linebot.v3.webhooks import (
 	FollowEvent, MessageEvent, PostbackEvent, TextMessageContent
 )
 import os
+import urllib.parse
+import process
 
 from dotenv import load_dotenv
 load_dotenv()
@@ -76,4 +78,23 @@ def handle_message(event):
 	line_bot_api.reply_message(ReplyMessageRequest(
 		replyToken=event.reply_token,
 		messages=[TextMessage(text=reply)]
+	))
+
+## PostbackActionに反応する
+@handler.add(PostbackEvent)
+def handle_postback(event: PostbackEvent):
+	## APIインスタンス化
+	with ApiClient(configuration) as api_client:
+		line_bot_api = MessagingApi(api_client)
+
+	## パース
+	## event.postbackにURLパラメータ形式でデータが入っている(e.g. "action=buy&itemid=123")
+	## 辞書型で取得する(e.g. data = {'action': 'buy', 'itemid': '123'})
+	data = dict(urllib.parse.parse_qsl(event.postback.data))
+	
+	messages = process.generate_reply(data)
+
+	line_bot_api.reply_message(ReplyMessageRequest(
+		replyToken=event.reply_token,
+		messages=messages
 	))
